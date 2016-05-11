@@ -1,7 +1,8 @@
 'use strict';
-var _      = require('../node_modules/lodash');
-var AWS    = require('../node_modules/aws-sdk');
-var async  = require('../node_modules/async');
+
+var _      = require('lodash');
+var AWS    = require('aws-sdk');
+var async  = require('async');
 
 
 class DeliveryStream{
