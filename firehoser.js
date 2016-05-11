@@ -80,8 +80,8 @@ class JSONDeliveryStream extends DeliveryStream {
 }
 
 class QueuableDeliveryStream extends DeliveryStream {
-    constructor(name, retryInterval, aws_config, maxTime=30000, maxSize=500, ...args){
-        super(name, retryInterval, aws_config, ...args);
+    constructor(name, maxTime=30000, maxSize=500, ...args){
+        super(name, ...args);
         this.queue = [];
         this.timeout = null;
         this.maxTime = maxTime;
