@@ -5,15 +5,16 @@ var async  = require('../node_modules/async');
 
 
 class DeliveryStream{
-    constructor(name, retryInterval=1500, awsConfig=null){
+    constructor(name, awsConfig=null, retryInterval=1500){
+        this.maxIngestion = 400;
+        this.maxDrains = 3;
         this.name = name;
-        this.retryInterval = retryInterval;
         if (awsConfig !== null){
             AWS.config.update(awsConfig);
         }
+        this.retryInterval = retryInterval;
+        
         this.firehose = new AWS.Firehose({params: {DeliveryStreamName: name}});
-        this.max_ingestion = 400;
-        this.max_drains = 3;
     }
 
     formatRecord(record){
@@ -26,20 +27,20 @@ class DeliveryStream{
 
     putRecords(records){
         records = _.map(records, this.formatRecord);
-        let chunks = _.chunk(records, this.max_ingestion);
+        let chunks = _.chunk(records, this.maxIngestion);
         let tasks = [];
         for (let i=0; i < chunks.length; i++){
             tasks.push(this.drain.bind(this, chunks[i]));
         }
         return new Promise((resolve, reject) => {
-            async.parallelLimit(tasks, this.max_drains, function(err, results){
+            async.parallelLimit(tasks, this.maxDrains, function(err, results){
                 err ? reject(err) : resolve(results);
             });
         });
     }
 
     drain(records, cb, numRetries=0){
-        var leftOvers = [];
+        var leftovers = [];
         this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
@@ -56,14 +57,14 @@ class DeliveryStream{
             // Push errored out records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
-                    leftOvers.push(orig);
+                    leftovers.push(orig);
                 }
             }
 
             // Recurse!
-            if (leftOvers.length){
+            if (leftovers.length){
                 return setTimeout(function(){
-                    this.drain(leftOvers, cb, numRetries + 1);
+                    this.drain(leftovers, cb, numRetries + 1);
                 }, this.retryInterval);
             } else {
                 return cb(null);
@@ -92,22 +93,23 @@ class QueuableDeliveryStream extends DeliveryStream {
 
         return new Promise((resolve, reject)=>{
             if (this.timeout === null){
+                // Start the countdown timer since we've not already done so.
                 this.timeout = setTimeout(()=>{
                     super.putRecords(this.queue)
                     .then((results)=>{resolve(results);})
                     .catch((err)=>{reject(err)});
                 }, this.maxTime);
-                return;
-            }
-            if (this.queue.length >= this.maxSize){
-                if (this.timeout !== null){
-                    clearTimeout(this.timeout);
-                    this.timeout = null;
+            } else {
+                if (this.queue.length >= this.maxSize){
+                    // Queue's full!
+                    if (this.timeout !== null){
+                        clearTimeout(this.timeout);
+                        this.timeout = null;
+                    }
+                    super.putRecords(this.queue)
+                    .then((results)=>{resolve(results);})
+                    .catch((err)=>{reject(err)});
                 }
-                super.putRecords(this.queue)
-                .then((results)=>{resolve(results);})
-                .catch((err)=>{reject(err)});
-                return;
             }
         });
     }
