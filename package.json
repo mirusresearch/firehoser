@@ -1,0 +1,30 @@
+{
+  "name": "firehoser",
+  "version": "1.0.0",
+  "description": "A wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.",
+  "main": "firehoser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mirusresearch/firehoser.git"
+  },
+  "keywords": [
+    "aws",
+    "kinesis",
+    "firehose",
+    "deliverystream"
+  ],
+  "author": "Don Spaulding <don@mirusresearch.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mirusresearch/firehoser/issues"
+  },
+  "homepage": "https://github.com/mirusresearch/firehoser#readme",
+  "dependencies": {
+    "async": "^2.0.0-rc.4",
+    "aws-sdk": "^2.3.10",
+    "lodash": "^4.12.0"
+  }
+}
