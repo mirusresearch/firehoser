@@ -121,3 +121,11 @@ class QueuableJSONDeliveryStream extends QueuableDeliveryStream {
         return super.formatRecord(JSON.stringify(record));
     }
 }
+
+
+module.exports = {
+    DeliveryStream: DeliveryStream,
+    JSONDeliveryStream: JSONDeliveryStream,
+    QueuableDeliveryStream: QueuableDeliveryStream,
+    QueuableJSONDeliveryStream: QueuableJSONDeliveryStream,
+};
