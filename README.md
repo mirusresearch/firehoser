@@ -63,7 +63,11 @@ Both `DeliveryStream` and `JSONDeliveryStream` will immediately send data to AWS
 ```node
 let maxDelay = 15000; // milliseconds
 let maxQueued = 100;
-let firehose = new firehoser.QueueableJSONDeliveryStream('my_delivery_stream_name', maxDelay, maxQueued);
+let firehose = new firehoser.QueueableJSONDeliveryStream(
+  'my_delivery_stream_name',
+  maxDelay,
+  maxQueued
+);
 
 firehose.putRecord({
  id: 'rec1'
