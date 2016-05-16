@@ -4,7 +4,7 @@
   "description": "A wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.",
   "main": "firehoser.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha -c -b tests.js"
   },
   "repository": {
     "type": "git",
@@ -25,6 +25,12 @@
   "dependencies": {
     "async": "^2.0.0-rc.4",
     "aws-sdk": "^2.3.10",
+    "jayschema": "^0.3.1",
     "lodash": "^4.12.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "mockery": "^1.7.0"
   }
 }

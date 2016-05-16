@@ -1,21 +1,33 @@
 'use strict';
 
-var _      = require('lodash');
-var AWS    = require('aws-sdk');
-var async  = require('async');
+var _ = require('lodash');
+var AWS = require('aws-sdk');
+var async = require('async');
+var JaySchema = require('jayschema');
 
+var schemaValidator = new JaySchema();
 
 class DeliveryStream{
-    constructor(name, awsConfig=null, retryInterval=1500){
+    constructor(name, awsConfig=null, schema=null, retryInterval=1500, firehose=null){
         this.maxIngestion = 400;
         this.maxDrains = 3;
         this.name = name;
         if (awsConfig !== null){
             AWS.config.update(awsConfig);
         }
+        this.schema = schema;
         this.retryInterval = retryInterval;
-        
-        this.firehose = new AWS.Firehose({params: {DeliveryStreamName: name}});
+        this.firehose = firehose ? firehose : new AWS.Firehose({params: {DeliveryStreamName: name}});
+    }
+
+    validateRecord(record){
+        if (this.schema === null){
+            return true;
+        }
+        let validationErrors = schemaValidator.validate(record, this.schema);
+        if(!_.isEmpty(validationErrors)){
+            throw new Error("Invalid Record: " + validationErrors);
+        }
     }
 
     formatRecord(record){
@@ -27,6 +39,7 @@ class DeliveryStream{
     }
 
     putRecords(records){
+        records = _.map(records, this.validateRecord.bind(this));
         records = _.map(records, this.formatRecord);
         let chunks = _.chunk(records, this.maxIngestion);
         let tasks = [];
@@ -55,7 +68,7 @@ class DeliveryStream{
                 // console.log(resp.FailedPutCount + " rows failed, trying again...");
             }
 
-            // Push errored out records back into the next list.
+            // Push errored records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
                     leftovers.push(orig);
