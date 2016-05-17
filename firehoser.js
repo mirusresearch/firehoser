@@ -22,7 +22,7 @@ class DeliveryStream{
 
     validateRecord(record){
         if (this.schema === null){
-            return true;
+            return;
         }
         let validationErrors = schemaValidator.validate(record, this.schema);
         if(!_.isEmpty(validationErrors)){
@@ -39,7 +39,7 @@ class DeliveryStream{
     }
 
     putRecords(records){
-        records = _.map(records, this.validateRecord.bind(this));
+        _.map(records, this.validateRecord.bind(this));
         records = _.map(records, this.formatRecord);
         let chunks = _.chunk(records, this.maxIngestion);
         let tasks = [];
