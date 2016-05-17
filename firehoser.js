@@ -4,6 +4,7 @@ var _ = require('lodash');
 var AWS = require('aws-sdk');
 var async = require('async');
 var JaySchema = require('jayschema');
+var moment = require('moment');
 
 var schemaValidator = new JaySchema();
 
@@ -135,10 +136,14 @@ class QueuableJSONDeliveryStream extends QueuableDeliveryStream {
     }
 }
 
+function makeRedshiftTimestamp(input){
+    return moment(input).utc().format('YYYY-MM-DD HH:mm:ss')
+}
 
 module.exports = {
     DeliveryStream: DeliveryStream,
     JSONDeliveryStream: JSONDeliveryStream,
     QueuableDeliveryStream: QueuableDeliveryStream,
     QueuableJSONDeliveryStream: QueuableJSONDeliveryStream,
+    makeRedshiftTimestamp: makeRedshiftTimestamp
 };
