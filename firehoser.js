@@ -27,7 +27,8 @@ class DeliveryStream{
         }
         let validationErrors = schemaValidator.validate(record, this.schema);
         if(!_.isEmpty(validationErrors)){
-            throw new Error("Invalid Record: " + validationErrors);
+            let unwrapped = _.map(validationErrors,ve=>{return _.fromPairs(_.map(ve,(v,k)=>{return [k,v];}))}));
+            throw new Error("Invalid Record: " + unwrapped);
         }
     }
 
