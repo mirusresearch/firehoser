@@ -22,13 +22,7 @@ class DeliveryStream{
     }
 
     validateRecord(record){
-        if (this.schema === null){
-            return;
-        }
-        let validationErrors = schemaValidator.validate(record, this.schema);
-        if(!_.isEmpty(validationErrors)){
-            throw new Error("Invalid Record: " + validationErrors);
-        }
+        return schemaValidator.validate(record, this.schema);
     }
 
     formatRecord(record){
@@ -40,16 +34,41 @@ class DeliveryStream{
     }
 
     putRecords(records){
-        _.map(records, this.validateRecord.bind(this));
-        records = _.map(records, this.formatRecord);
-        let chunks = _.chunk(records, this.maxIngestion);
-        let tasks = [];
-        for (let i=0; i < chunks.length; i++){
-            tasks.push(this.drain.bind(this, chunks[i]));
-        }
         return new Promise((resolve, reject) => {
+            // Validate records against a schema, if necessary.
+            var schemaError, schemaErrorRecord;
+            if (this.schema){
+                _.forEach(records, (record) => {
+                    let validationErrors = this.validateRecord(record);
+                    if (!_.isEmpty(validationErrors)){
+                        schemaError = validationErrors[0];
+                        schemaErrorRecord = record;
+                        return false;
+                    }
+                });            
+                if (schemaError){
+                    return reject(new Error({
+                        type: "schema",
+                        details: schemaError,
+                        trigger: schemaErrorRecord
+                    }));
+                }
+            }
+
+            // Split the records into reasonably-sized chunks.
+            records = _.map(records, this.formatRecord);
+            let chunks = _.chunk(records, this.maxIngestion);
+            let tasks = [];
+            for (let i=0; i < chunks.length; i++){
+                tasks.push(this.drain.bind(this, chunks[i]));
+            }
+
+            // Schedule the chunks all at the same time.
             async.parallelLimit(tasks, this.maxDrains, function(err, results){
-                err ? reject(err) : resolve(results);
+                if (err){
+                    return reject(new Error({type: "firehose", details: err, trigger: null}));
+                }
+                return resolve(results);
             });
         });
     }
@@ -59,14 +78,11 @@ class DeliveryStream{
         this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
-                // console.error(firehose_err);
-                // console.dir(resp);
                 return cb(firehoseErr);
             }
 
             // Not all records make it in, but firehose keeps on chugging!
             if (resp.FailedPutCount > 0){
-                // console.log(resp.FailedPutCount + " rows failed, trying again...");
             }
 
             // Push errored records back into the next list.
@@ -82,7 +98,7 @@ class DeliveryStream{
                     this.drain(leftovers, cb, numRetries + 1);
                 }, this.retryInterval);
             } else {
-                return cb(null);
+                return cb(null); 
             }
         });
     }

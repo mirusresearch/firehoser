@@ -51,14 +51,18 @@ describe("DeliveryStream", function(){
             return ds.putRecords(_.map(_.range(600), (i) => {`record${i}`}));
         });
 
-        it("should validate records match a schema", function(){
-            ds.putRecord({
+        it("should throw an error when a record doesn't match the schema", function(){
+            jds.putRecord({
                 "lastName": "DoesntMatter"
             }).catch((err)=>{
-                expect(err).to.exist;
+                expect(err.type).to.be("schema");
+                expect(err.details).to.exist;
+                expect(err.trigger).to.exist;
             })
+        });
 
-            ds.putRecord({
+        it("should not throw an error when the record matches the schema", function(){
+            jds.putRecord({
                 "firstName": "Don"
             }).catch((err)=>{
                 expect(err).to.not.exist;
