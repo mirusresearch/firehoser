@@ -121,26 +121,34 @@ class QueuableDeliveryStream extends DeliveryStream {
 
     putRecords(records){
         this.queue.push(...records);
-
-        return new Promise((resolve, reject)=>{
-            if (this.timeout === null){
-                // Start the countdown timer since we've not already done so.
-                this.timeout = setTimeout(()=>{
-                    super.putRecords(this.queue)
-                    .then((results)=>{resolve(results);})
-                    .catch((err)=>{reject(err)});
-                }, this.maxTime);
-            } else {
-                if (this.queue.length >= this.maxSize){
-                    // Queue's full!
-                    if (this.timeout !== null){
-                        clearTimeout(this.timeout);
-                        this.timeout = null;
-                    }
-                    super.putRecords(this.queue)
-                    .then((results)=>{resolve(results);})
-                    .catch((err)=>{reject(err)});
+        return new Promise((resolve, reject) => {
+            if (this.queue.length >= this.maxSize){
+                // Queue's full!
+                if (this.timeout !== null){
+                    clearTimeout(this.timeout);
+                    this.timeout = null;
                 }
+                let toQueue = this.queue.splice(0, this.queue.length);
+                return super.putRecords(
+                    toQueue
+                ).then((results) => {
+                    resolve(results);
+                }).catch((err) => {
+                    reject(err);
+                });
+            }
+            if (this.queue.length && this.timeout === null){
+                // Start the countdown timer since we've not already done so.
+                this.timeout = setTimeout(() => {
+                    let toQueue = this.queue.splice(0, this.queue.length);
+                    super.putRecords(
+                        toQueue
+                    ).then((results) => {
+                        resolve(results);
+                    }).catch((err) => {
+                        reject(err);
+                    });
+                }, this.maxTime);
             }
         });
     }
