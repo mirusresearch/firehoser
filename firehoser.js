@@ -9,7 +9,7 @@ var moment = require('moment');
 var schemaValidator = new JaySchema();
 
 class DeliveryStream{
-    constructor(name, awsConfig=null, schema=null, retryInterval=1500, firehose=null){
+    constructor(name, awsConfig=null, schema=null, retryInterval=1500, firehose=null, logger=null){
         this.maxIngestion = 400;
         this.maxDrains = 3;
         this.name = name;
@@ -19,6 +19,7 @@ class DeliveryStream{
         this.schema = schema;
         this.retryInterval = retryInterval;
         this.firehose = firehose ? firehose : new AWS.Firehose({params: {DeliveryStreamName: name}});
+        this.log = logger ? logger : () => {};
     }
 
     validateRecord(record){
@@ -47,6 +48,7 @@ class DeliveryStream{
                     }
                 });            
                 if (schemaError){
+                    this.log(`Encountered schema errors: ${schemaError.desc}`);
                     return reject(new Error({
                         type: "schema",
                         details: schemaError,
@@ -64,8 +66,10 @@ class DeliveryStream{
             }
 
             // Schedule the chunks all at the same time.
+            this.log(`Kicking off ${tasks.length} calls to drain() for ${records.length} records.`);
             async.parallelLimit(tasks, this.maxDrains, function(err, results){
                 if (err){
+                    this.log(`Encountered firehose error: ${err}`);
                     return reject(new Error({type: "firehose", details: err, trigger: null}));
                 }
                 return resolve(results);
@@ -75,6 +79,7 @@ class DeliveryStream{
 
     drain(records, cb, numRetries=0){
         var leftovers = [];
+        this.log(`Draining ${records.length} records.  Pass #${numRetries}`);
         this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
@@ -88,6 +93,7 @@ class DeliveryStream{
             // Push errored records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
+                    this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`);
                     leftovers.push(orig);
                 }
             }
