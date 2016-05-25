@@ -80,7 +80,7 @@ class DeliveryStream{
 
     drain(records, cb, numRetries=0){
         var leftovers = [];
-        this.log(`Draining ${records.length} records.  Pass #${numRetries}`);
+        this.log(`Draining ${records.length} records.  Pass #${numRetries + 1}`);
         this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
