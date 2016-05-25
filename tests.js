@@ -53,18 +53,18 @@ describe("DeliveryStream", function(){
 
         it("should throw an error when a record doesn't match the schema", function(){
             jds.putRecord({
-                "lastName": "DoesntMatter"
-            }).catch((err)=>{
+                "firstName": 3
+            }).catch((err, invalidRecords)=>{
                 expect(err.type).to.be("schema");
                 expect(err.details).to.exist;
-                expect(err.trigger).to.exist;
+                expect(err.originalRecord).to.exist;
             })
         });
 
         it("should not throw an error when the record matches the schema", function(){
             jds.putRecord({
                 "firstName": "Don"
-            }).catch((err)=>{
+            }).catch((err, invalidRecords)=>{
                 expect(err).to.not.exist;
             })
         });

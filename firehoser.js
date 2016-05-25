@@ -12,6 +12,7 @@ class DeliveryStream{
     constructor(name, awsConfig=null, schema=null, retryInterval=1500, firehose=null, logger=null){
         this.maxIngestion = 400;
         this.maxDrains = 3;
+        this.maxRetries = 40;
         this.name = name;
         if (awsConfig !== null){
             AWS.config.update(awsConfig);
@@ -26,6 +27,28 @@ class DeliveryStream{
         return schemaValidator.validate(record, this.schema);
     }
 
+    validateRecords(records){
+        if (!this.schema){
+            return [records, []];
+        }
+        let validRecords = [];
+        let invalidRecords = [];
+        _.forEach(records, (record) => {
+            let validationErrors = this.validateRecord(record);
+            if (_.isEmpty(validationErrors)){
+                validRecords.push(record);
+            } else {
+                invalidRecords.push({
+                    type: "schema",
+                    originalRecord: record,
+                    description: validationErrors[0].desc,
+                    details: validationErrors[0],
+                });
+            }
+        });
+        return [validRecords, invalidRecords];
+    }
+
     formatRecord(record){
         return {Data: record + '\n'};
     }
@@ -38,28 +61,10 @@ class DeliveryStream{
         this.log(`DeliveryStream.putRecords() called with ${records.length} records.`);
         return new Promise((resolve, reject) => {
             // Validate records against a schema, if necessary.
-            var schemaError, schemaErrorRecord;
-            if (this.schema){
-                _.forEach(records, (record) => {
-                    let validationErrors = this.validateRecord(record);
-                    if (!_.isEmpty(validationErrors)){
-                        schemaError = validationErrors[0];
-                        schemaErrorRecord = record;
-                        return false;
-                    }
-                });            
-                if (schemaError){
-                    this.log(`Encountered schema errors: ${schemaError.desc}`);
-                    return reject(new Error({
-                        type: "schema",
-                        details: schemaError,
-                        trigger: schemaErrorRecord
-                    }));
-                }
-            }
+            let [validRecords, invalidRecords] = this.validateRecords(records);
 
             // Split the records into reasonably-sized chunks.
-            records = _.map(records, this.formatRecord);
+            records = _.map(validRecords, this.formatRecord);
             let chunks = _.chunk(records, this.maxIngestion);
             let tasks = [];
             for (let i=0; i < chunks.length; i++){
@@ -69,11 +74,11 @@ class DeliveryStream{
             // Schedule the chunks all at the same time.
             this.log(`Kicking off ${tasks.length} calls to drain() for ${records.length} records.`);
             async.parallelLimit(tasks, this.maxDrains, function(err, results){
-                if (err){
-                    this.log(`Encountered firehose error: ${err}`);
-                    return reject(new Error({type: "firehose", details: err, trigger: null}));
+                let allErrors = invalidRecords.concat(_.flatten(results));
+                if (err || !_.isEmpty(allErrors)){
+                    return reject(err, allErrors);
                 }
-                return resolve(results);
+                return resolve();
             });
         });
     }
@@ -95,17 +100,27 @@ class DeliveryStream{
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
                     this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`);
-                    leftovers.push(orig);
+                    leftovers.push({
+                        type: "firehose",
+                        description: result.ErrorMessage,
+                        details: {
+                            ErrorCode: result.ErrorCode,
+                            ErrorMessage: result.ErrorMessage,
+                        },
+                        originalRecord: orig,
+                    });
                 }
             }
 
             // Recurse!
-            if (leftovers.length){
+            if (leftovers.length && numRetries < this.maxRetries){
+                // We're about to recurse, let the child handle storing error details.
+                leftovers = _.map(leftovers, (leftover) => { return _.pick(leftover, ['originalRecord'])})
                 return setTimeout(function(){
                     this.drain.bind(this, leftovers, cb, numRetries + 1);
                 }, this.retryInterval);
             } else {
-                return cb(null); 
+                return cb(null, leftovers);
             }
         });
     }
