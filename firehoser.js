@@ -35,6 +35,7 @@ class DeliveryStream{
     }
 
     putRecords(records){
+        this.log(`putRecords() called with ${records.length} records.`);
         return new Promise((resolve, reject) => {
             // Validate records against a schema, if necessary.
             var schemaError, schemaErrorRecord;
@@ -126,10 +127,13 @@ class QueuableDeliveryStream extends DeliveryStream {
     }
 
     putRecords(records){
+        this.log(`putRecords() called with ${records.length} records.`);
         this.queue.push(...records);
+        this.log(`queue size is: ${this.queue.length}, maxSize is: ${this.maxSize}.`);
         return new Promise((resolve, reject) => {
             if (this.queue.length >= this.maxSize){
                 // Queue's full!
+                this.log(`queue is full, draining immediately.`);
                 if (this.timeout !== null){
                     clearTimeout(this.timeout);
                     this.timeout = null;
@@ -145,7 +149,9 @@ class QueuableDeliveryStream extends DeliveryStream {
             }
             if (this.queue.length && this.timeout === null){
                 // Start the countdown timer since we've not already done so.
+                this.log(`Starting a countdown timer for ${this.maxTime} milliseconds from now.`);
                 this.timeout = setTimeout(() => {
+                    this.log(`Countdown timer expired, time to drain the queue of ${this.queue.length} records.`);
                     let toQueue = this.queue.splice(0, this.queue.length);
                     super.putRecords(
                         toQueue
