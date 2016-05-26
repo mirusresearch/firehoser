@@ -52,20 +52,22 @@ describe("DeliveryStream", function(){
         });
 
         it("should throw an error when a record doesn't match the schema", function(){
-            jds.putRecord({
+            return jds.putRecord({
                 "firstName": 3
-            }).catch((err, invalidRecords)=>{
-                expect(err.type).to.be("schema");
+            }).catch((errors)=>{
+                let err = errors[0];
+                expect(err.type).to.equal("schema");
                 expect(err.details).to.exist;
                 expect(err.originalRecord).to.exist;
             })
         });
 
         it("should not throw an error when the record matches the schema", function(){
-            jds.putRecord({
+            return jds.putRecord({
                 "firstName": "Don"
-            }).catch((err, invalidRecords)=>{
-                expect(err).to.not.exist;
+            }).catch((errors)=>{
+                expect(errors).to.be.undefined;
+                expect(errors).to.be.empty;
             })
         });
     }),
