@@ -38,11 +38,12 @@ class DeliveryStream{
             if (_.isEmpty(validationErrors)){
                 validRecords.push(record);
             } else {
+                let ve = validationErrors[0];
                 invalidRecords.push({
                     type: "schema",
                     originalRecord: record,
-                    description: validationErrors[0].desc,
-                    details: validationErrors[0],
+                    description: buildSchemaErrorDescription(ve),
+                    details: ve,
                 });
             }
         });
@@ -76,7 +77,7 @@ class DeliveryStream{
             async.parallelLimit(tasks, this.maxDrains, function(err, results){
                 let allErrors = invalidRecords.concat(_.flatten(results));
                 if (err || !_.isEmpty(allErrors)){
-                    return reject(err, allErrors);
+                    return reject(allErrors);
                 }
                 return resolve();
             });
@@ -89,7 +90,12 @@ class DeliveryStream{
         this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
-                return cb(firehoseErr);
+                return cb(null, {
+                    type: "firehose",
+                    description: "Internal aws-sdk error.",
+                    details: firehoseErr,
+                    originalRecord: null
+                });
             }
 
             // Not all records make it in, but firehose keeps on chugging!
@@ -182,6 +188,16 @@ class QueuableJSONDeliveryStream extends QueuableDeliveryStream {
         return super.formatRecord(JSON.stringify(record));
     }
 }
+
+
+function buildSchemaErrorDescription(ve){
+    if (ve.desc){
+        return ve.desc;
+    }
+    let field = ve.instanceContext.replace(/(#\/)|(#)/ig, "").replace(/\//g, ".")
+    return `${ve.kind || 'Error'} on '${field}'.  Expected ${ve.constraintName} to be ${ve.constraintValue}, actual value was ${ve.testedValue}.`
+}
+
 
 function makeRedshiftTimestamp(input){
     return moment(input).utc().format('YYYY-MM-DD HH:mm:ss')
