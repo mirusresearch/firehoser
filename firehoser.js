@@ -105,7 +105,7 @@ class DeliveryStream{
             // Push errored records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
-                    this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`);
+                    this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`,'error');
                     leftovers.push({
                         type: "firehose",
                         description: result.ErrorMessage,
