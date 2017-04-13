@@ -189,6 +189,11 @@ class QueuableJSONDeliveryStream extends QueuableDeliveryStream {
     }
 }
 
+class PlainDeliveryStream extends DeliveryStream {
+    formatRecord(record){
+        return { Data: record };
+    }
+}
 
 function buildSchemaErrorDescription(ve){
     if (ve.desc){
@@ -208,5 +213,6 @@ module.exports = {
     JSONDeliveryStream: JSONDeliveryStream,
     QueuableDeliveryStream: QueuableDeliveryStream,
     QueuableJSONDeliveryStream: QueuableJSONDeliveryStream,
+    PlainDeliveryStream: PlainDeliveryStream,
     makeRedshiftTimestamp: makeRedshiftTimestamp
 };
