@@ -59,6 +59,7 @@ class DeliveryStream{
     }
 
     putRecords(records){
+        var self = this;
         this.log(`DeliveryStream.putRecords() called with ${records.length} records.`);
         return new Promise((resolve, reject) => {
             // Validate records against a schema, if necessary.
@@ -73,7 +74,7 @@ class DeliveryStream{
             }
 
             // Schedule the chunks all at the same time.
-            this.log(`Kicking off ${tasks.length} calls to drain() for ${records.length} records.`);
+            self.log(`Kicking off ${tasks.length} calls to drain() for ${records.length} records.`);
             async.parallelLimit(tasks, this.maxDrains, function(err, results){
                 let allErrors = invalidRecords.concat(_.flatten(results));
                 if (err || !_.isEmpty(allErrors)){
@@ -86,9 +87,9 @@ class DeliveryStream{
 
     drain(records, cb, numRetries=0){
         var leftovers = [];
-        var self = this;
-        self.log(`Draining ${records.length} records.  Pass #${numRetries + 1}`);
-        self.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
+        // var self = this;
+        this.log(`Draining ${records.length} records.  Pass #${numRetries + 1}`);
+        this.firehose.putRecordBatch({Records: records}, (firehoseErr, resp)=>{
             // Stuff broke!
             if (firehoseErr){
                 return cb(null, {
@@ -106,7 +107,7 @@ class DeliveryStream{
             // Push errored records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
-                    self.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`,'error');
+                    this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`,'error');
                     leftovers.push({
                         type: "firehose",
                         description: result.ErrorMessage,
@@ -122,10 +123,11 @@ class DeliveryStream{
             // Recurse!
             if (leftovers.length && numRetries < this.maxRetries){
                 // We're about to recurse, let the child handle storing error details.
-                leftovers = _.map(leftovers, (leftover) => { return _.pick(leftover, ['originalRecord'])})
-                return setTimeout(function(){
-                    self.drain.bind(this, leftovers, cb, numRetries + 1);
-                }, self.retryInterval);
+                leftovers = _.map(leftovers, (leftover) => { return _.pick(leftover, ['originalRecord'])});
+
+                return setTimeout(()=>{
+                    this.drain(leftovers, cb, numRetries + 1);
+                }, this.retryInterval);
             } else {
                 return cb(null, leftovers);
             }

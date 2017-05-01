@@ -1,12 +1,26 @@
-var _ = require("lodash");
-var expect = require('chai').expect;
+var _         = require("lodash");
+var expect    = require('chai').expect;
 var firehoser = require('./firehoser');
 
 class MockAWSFirehose {
+    constructor(firehoseErrors,failedPut){
+        this.firehoseErrors = firehoseErrors || false;
+        this.failedPut = failedPut || false;
+        this.attempt = 0;
+    }
     putRecordBatch(batch, cb){
-        cb(null, {
-            FailedPutCount: 0,
-            RequestResponses: batch.Records.slice()
+        const err = this.firehoseErrors?new Error('OH NOES! Firehose Error!'):null;
+        this.attempt++;
+        // console.log('attempt!:',this.attempt);
+        let reqresp = batch.Records.slice();
+        let failedCount = 0;
+        if (this.failedPut && this.attempt<2){
+            reqresp     = _.map(reqresp,(r)=>{ return {ErrorMessage : 'Life is terrible', ErrorCode : 403 }; });
+            failedCount = reqresp.length;
+        }
+        cb(err, {
+            FailedPutCount   : failedCount,
+            RequestResponses : reqresp
         });
     }
 }
@@ -18,7 +32,7 @@ describe("DeliveryStream", function(){
             let ds = new firehoser.DeliveryStream("the_ds");
             expect(ds).to.be.an.instanceof(firehoser.DeliveryStream);
         });
-    }),
+    });
 
     describe("DeliveryStream", function(){
         let ds = new firehoser.DeliveryStream("the_ds", null, null, 3000, new MockAWSFirehose());
@@ -70,10 +84,23 @@ describe("DeliveryStream", function(){
                 expect(errors).to.be.empty;
             })
         });
-    }),
 
-    describe("QueuableDeliveryStream", function(){
-        it("should call drain after a configurable timeout");
-        it("should call drain after a maximum number of records have been put");
-    })
+        it("should handle firehose errors", function(){
+            let fherr = new firehoser.DeliveryStream("the_ds", null, null, 1000, new MockAWSFirehose(true));
+            return fherr.putRecord({ "firstName": "Don" }).catch((errors)=>{
+                expect(errors).to.not.be.empty;
+                expect(errors.length).to.equal(1);
+            });
+        });
+
+        it("should retry failed PUTS", function(){
+            let puterr = new firehoser.DeliveryStream("the_ds", null, null, 100, new MockAWSFirehose(false,true));
+            return puterr.putRecord({ "firstName": "Don" });
+        });
+
+
+    });
+
+
+
 })
