@@ -86,8 +86,9 @@ class DeliveryStream{
 
     drain(records, cb, numRetries=0){
         var leftovers = [];
-        this.log(`Draining ${records.length} records.  Pass #${numRetries + 1}`);
-        this.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
+        var self = this;
+        self.log(`Draining ${records.length} records.  Pass #${numRetries + 1}`);
+        self.firehose.putRecordBatch({Records: records}, function(firehoseErr, resp){
             // Stuff broke!
             if (firehoseErr){
                 return cb(null, {
@@ -105,7 +106,7 @@ class DeliveryStream{
             // Push errored records back into the next list.
             for (let [orig, result] of _.zip(records, resp.RequestResponses)){
                 if (!_.isUndefined(result.ErrorCode)){
-                    this.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`,'error');
+                    self.log(`Got ErrorCode ${result.ErrorCode} for record ${orig}`,'error');
                     leftovers.push({
                         type: "firehose",
                         description: result.ErrorMessage,
@@ -123,8 +124,8 @@ class DeliveryStream{
                 // We're about to recurse, let the child handle storing error details.
                 leftovers = _.map(leftovers, (leftover) => { return _.pick(leftover, ['originalRecord'])})
                 return setTimeout(function(){
-                    this.drain.bind(this, leftovers, cb, numRetries + 1);
-                }, this.retryInterval);
+                    self.drain.bind(this, leftovers, cb, numRetries + 1);
+                }, self.retryInterval);
             } else {
                 return cb(null, leftovers);
             }
