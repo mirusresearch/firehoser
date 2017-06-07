@@ -1,5 +1,5 @@
 # firehoser
-A friendly wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.  Get your data from node into S3 or Redshift in as easy a manner as possible.
+A friendly wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.  Get your data from node into S3 or Redshift in as easy a manner as possible.  **Please Note:** *Firehoser is written in es6 and needs node.js ≥ 6.0*
 
 ## Installation
 `npm install firehoser`
