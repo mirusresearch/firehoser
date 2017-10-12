@@ -123,7 +123,7 @@ class DeliveryStream{
             // Recurse!
             if (leftovers.length && numRetries < this.maxRetries){
                 // We're about to recurse, let the child handle storing error details.
-                leftovers = _.map(leftovers, (leftover) => { return _.pick(leftover, ['originalRecord'])});
+                leftovers = _.map(leftovers, pickData);
 
                 return setTimeout(()=>{
                     this.drain(leftovers, cb, numRetries + 1);
@@ -211,11 +211,16 @@ function makeRedshiftTimestamp(input){
     return moment(input).utc().format('YYYY-MM-DD HH:mm:ss')
 }
 
+function pickData(leftover){
+  return _.pick(leftover.originalRecord, ['Data']);
+}
+
 module.exports = {
     DeliveryStream: DeliveryStream,
     JSONDeliveryStream: JSONDeliveryStream,
     QueuableDeliveryStream: QueuableDeliveryStream,
     QueuableJSONDeliveryStream: QueuableJSONDeliveryStream,
     PlainDeliveryStream: PlainDeliveryStream,
-    makeRedshiftTimestamp: makeRedshiftTimestamp
+    makeRedshiftTimestamp: makeRedshiftTimestamp,
+    pickData: pickData
 };

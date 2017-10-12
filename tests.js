@@ -101,6 +101,37 @@ describe("DeliveryStream", function(){
 
     });
 
+})
 
+describe('pickData', function(){
+  let leftovers = [{
+      type: "firehose",
+      description: "out of service",
+      details: {
+          ErrorCode: 500,
+          ErrorMessage: "AWS is currently down",
+      },
+      originalRecord: {
+        Data: {log: true, data: { id: 1}}
+      }
+    },
+    {
+      type: "firehose",
+      description: "out of service",
+      details: {
+          ErrorCode: 500,
+          ErrorMessage: "AWS is currently down",
+      },
+      originalRecord: {
+        Data: {log: true, data: { id: 2}}
+      }
+    }];
 
+    it("should return the object with Data attributes", function(){
+      let resolvedLeftoverData = _.map(leftovers, firehoser.pickData);
+
+      expect(resolvedLeftoverData.length).to.equal(2);
+      expect(resolvedLeftoverData[0]).to.have.property('Data');
+      expect(resolvedLeftoverData[1]).to.have.property('Data');
+    });
 })
