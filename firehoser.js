@@ -141,7 +141,7 @@ class JSONDeliveryStream extends DeliveryStream {
     }
 }
 
-class QueuableDeliveryStream extends DeliveryStream {
+class QueueableDeliveryStream extends DeliveryStream {
     constructor(name, maxTime=30000, maxSize=500, ...args){
         super(name, ...args);
         this.queue = [];
@@ -153,7 +153,7 @@ class QueuableDeliveryStream extends DeliveryStream {
     }
 
     putRecords(records){
-        this.log(`QueuableDeliveryStream.putRecords() called with ${records.length} records.`);
+        this.log(`QueueableDeliveryStream.putRecords() called with ${records.length} records.`);
         this.queue.push(...records);
         if (this.promise === null){
             this.promise = new Promise((resolve, reject) => {
@@ -186,7 +186,7 @@ class QueuableDeliveryStream extends DeliveryStream {
     }
 }
 
-class QueuableJSONDeliveryStream extends QueuableDeliveryStream {
+class QueueableJSONDeliveryStream extends QueueableDeliveryStream {
     formatRecord(record){
         return super.formatRecord(JSON.stringify(record));
     }
@@ -218,8 +218,8 @@ function pickData(leftover){
 module.exports = {
     DeliveryStream: DeliveryStream,
     JSONDeliveryStream: JSONDeliveryStream,
-    QueuableDeliveryStream: QueuableDeliveryStream,
-    QueuableJSONDeliveryStream: QueuableJSONDeliveryStream,
+    QueueableDeliveryStream: QueueableDeliveryStream,
+    QueueableJSONDeliveryStream: QueueableJSONDeliveryStream,
     PlainDeliveryStream: PlainDeliveryStream,
     makeRedshiftTimestamp: makeRedshiftTimestamp,
     pickData: pickData

@@ -1,6 +1,6 @@
 {
   "name": "firehoser",
-  "version": "1.2.5",
+  "version": "1.3.5",
   "description": "A wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.",
   "main": "firehoser.js",
   "scripts": {

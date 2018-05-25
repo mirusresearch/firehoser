@@ -1,10 +1,13 @@
 # firehoser
-A friendly wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.  Get your data from node into S3 or Redshift in as easy a manner as possible.  
+A friendly wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.  Get your data from node into S3 or Redshift in as easy a manner as possible.
 
 **Please Note:** *Firehoser is written in es6 and needs node.js ≥ 6.0*
 
 ## Installation
+`yarn add firehoser`
+or
 `npm install firehoser`
+
 
 ## Usage
 To use Firehoser, you need to create an instance of a DeliveryStream.  There are several variations, but they all expose the same API: `putRecord` and it's pluralized counterpart `putRecords`.
@@ -60,7 +63,7 @@ firehose.putRecords([
 });
 ```
 
-Both `DeliveryStream` and `JSONDeliveryStream` will immediately send data to AWS Kinesis Firehose as soon as (and as often as) you call `putRecord`.  Sometimes what you want instead is to queue up records as they are generated, and only send them to AWS Kinesis Firehose once a certain number of them have been gathered, or a certain time limit has passed.  For these cases, we've created `QueuableDeliveryStream` and `QueuableJSONDeliveryStream`.  Simply pass in a cutoff value for the number of records, or the staleness of records that you're comfortable with, and we'll wait until one of those limits is passed before sending off the data.
+Both `DeliveryStream` and `JSONDeliveryStream` will immediately send data to AWS Kinesis Firehose as soon as (and as often as) you call `putRecord`.  Sometimes what you want instead is to queue up records as they are generated, and only send them to AWS Kinesis Firehose once a certain number of them have been gathered, or a certain time limit has passed.  For these cases, we've created `QueueableDeliveryStream` and `QueueableJSONDeliveryStream`.  Simply pass in a cutoff value for the number of records, or the staleness of records that you're comfortable with, and we'll wait until one of those limits is passed before sending off the data.
 
 ```node
 let maxDelay = 15000; // milliseconds
