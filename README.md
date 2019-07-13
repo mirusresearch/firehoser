@@ -1,3 +1,6 @@
+### Firehoser is no longer being maintained at this time.  If someone would like to step in and take over the project please reply to [Issue #11](https://github.com/mirusresearch/firehoser/issues/11)
+
+
 # firehoser
 A friendly wrapper around AWS Kinesis Firehose with retry logic and custom queuing behavior.  Get your data from node into S3 or Redshift in as easy a manner as possible.
 
